@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/animation.dart';
 
 void main() {
   runApp(const MyApp());
@@ -42,7 +43,7 @@ class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  _SplashScreenState createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen>
@@ -53,19 +54,28 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
+    // Animation de fondu (fade in)
     _controller = AnimationController(
-      duration: const Duration(seconds: 2, milliseconds: 500),
       vsync: this,
+      duration: const Duration(seconds: 2),
     );
-    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(_controller)
-      ..addListener(() {
-        setState(() {});
-      });
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
+
+    // Démarrer l'animation
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 2, milliseconds: 500), () {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
+    // Naviguer vers "/login" une fois l'animation terminée
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/login');
+          }
+        });
       }
     });
   }
@@ -90,15 +100,15 @@ class _SplashScreenState extends State<SplashScreen>
             end: Alignment.bottomRight,
           ),
         ),
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: const Center(
+        child: Center(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                FlutterLogo(size: 100),
-                SizedBox(height: 20),
-                Text(
+                Image.asset('assets/images/planevent.png', height: 100),
+                const SizedBox(height: 20),
+                const Text(
                   "Bienvenue dans PlanEvent",
                   style: TextStyle(
                     fontSize: 20,
@@ -402,68 +412,152 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            const Icon(Icons.home),
-            const SizedBox(width: 5),
-            const Text('Accueil'),
-          ],
+        leading: Builder(
+          builder: (context) {
+            return IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            );
+          },
         ),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, '/login');
-            },
-            icon: const Icon(Icons.logout),
-            color: Theme.of(context).colorScheme.primary,
+      ),
+      drawer: _buildDrawer(context),
+      body: _buildBody(context),
+      bottomNavigationBar: _buildBottomNavigationBar(context),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          DrawerHeader(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.secondary,
+                ],
+              ),
+            ),
+            child: Column(
+              children: [
+                const Text(
+                  'PlanEvent',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const CircleAvatar(
+                  radius: 40,
+                  backgroundImage: AssetImage('assets/images/avatar.png'),
+                ),
+              ],
+            ),
+          ),
+          _buildDrawerItem(
+            icon: Icons.person,
+            text: 'PROFIL',
+            onTap: () => Navigator.pushNamed(context, '/profile'),
+          ),
+          _buildDrawerItem(
+            icon: Icons.notifications,
+            text: 'Notification',
+            onTap: () => Navigator.pushNamed(context, '/notification'),
+          ),
+          _buildDrawerItem(
+            icon: Icons.settings,
+            text: 'Paramètres',
+            onTap: () => Navigator.pushNamed(context, '/settings'),
+          ),
+          const Divider(),
+          _buildDrawerItem(
+            icon: Icons.exit_to_app,
+            text: 'Déconnexion',
+            onTap: () => Navigator.pushReplacementNamed(context, '/login'),
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Bienvenue sur la page d\'accueil',
-                style: TextStyle(fontSize: 24, color: Colors.white),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/message');
-                },
-                child: const Text('Messages'),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/calendar');
-                },
-                child: const Text('Calendrier'),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/settings');
-                },
-                child: const Text('Paramètres'),
-              ),
-            ],
-          ),
+    );
+  }
+
+  Widget _buildDrawerItem(
+      {required IconData icon,
+      required String text,
+      required VoidCallback onTap}) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(text),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.secondary,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       ),
+      child: Center(
+        child: const Text(
+          'Bienvenue sur la page d\'accueil',
+          style: TextStyle(fontSize: 24, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigationBar(BuildContext context) {
+    return BottomNavigationBar(
+      backgroundColor: Theme.of(context).colorScheme.primary,
+      selectedItemColor: Colors.amberAccent,
+      unselectedItemColor: Color.fromARGB(255, 137, 117, 117),
+      currentIndex: 0, // Indice de la page actuelle
+      onTap: (index) {
+        switch (index) {
+          case 0:
+            Navigator.pushNamed(context, '/home');
+            break;
+          case 1:
+            Navigator.pushNamed(context, '/add');
+            break;
+          case 2:
+            Navigator.pushNamed(context, '/message');
+            break;
+          case 3:
+            Navigator.pushNamed(context, '/calendar');
+            break;
+        }
+      },
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home),
+          label: 'Accueil',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.add_circle),
+          label: 'Ajouter',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.chat),
+          label: 'Messages',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.calendar_today),
+          label: 'Calendrier',
+        ),
+      ],
     );
   }
 }
