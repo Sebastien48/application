@@ -1,5 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/animation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 void main() {
   runApp(const MyApp());
@@ -33,6 +36,8 @@ class MyApp extends StatelessWidget {
         '/settings': (context) => const SettingsPage(),
         '/reset-password': (context) => const ResetPasswordPage(),
         '/new-password': (context) => const NewPasswordPage(),
+        '/add': (context) => const AddPage(),
+        // '/detail': (context) => const DetailPage(),
       },
     );
   }
@@ -412,6 +417,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        foregroundColor: Color.fromARGB(255, 202, 79, 79),
         leading: Builder(
           builder: (context) {
             return IconButton(
@@ -422,9 +428,32 @@ class HomePage extends StatelessWidget {
             );
           },
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info),
+            onPressed: () {
+              // Afficher un message ou ouvrir un écran d'information
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text(
+                    "Information",
+                  ),
+                  content: const Text("Ceci est une icône d'information."),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text("OK"),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
       drawer: _buildDrawer(context),
-      body: _buildBody(context),
+      body: _build(context),
       bottomNavigationBar: _buildBottomNavigationBar(context),
     );
   }
@@ -466,9 +495,9 @@ class HomePage extends StatelessWidget {
             onTap: () => Navigator.pushNamed(context, '/profile'),
           ),
           _buildDrawerItem(
-            icon: Icons.notifications,
-            text: 'Notification',
-            onTap: () => Navigator.pushNamed(context, '/notification'),
+            icon: Icons.history,
+            text: 'Historique des événements',
+            onTap: () => Navigator.pushNamed(context, '/history'),
           ),
           _buildDrawerItem(
             icon: Icons.settings,
@@ -497,33 +526,217 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.secondary,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Center(
-        child: const Text(
-          'Bienvenue sur la page d\'accueil',
-          style: TextStyle(fontSize: 24, color: Colors.white),
+  Widget _build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Container(
+          width: 300, // Taille du grand carré
+          height: 700,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2), // Fond semi-transparent
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(
+                color: Colors.lightBlueAccent, width: 3), // Bordure bleue
+            boxShadow: [
+              BoxShadow(
+                color:
+                    const Color.fromARGB(255, 204, 186, 186).withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            children: [
+              const Text(
+                "Catégorie d'événement",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.lightBlueAccent, // Nouvelle couleur du texte
+                ),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: GridView.count(
+                  crossAxisCount: 1, // 1 colonne pour un alignement vertical
+                  childAspectRatio: 2, // Agrandir les images des petits carrés
+                  mainAxisSpacing: 10,
+                  children: [
+                    _buildCategoryItem(
+                        context, "Réunion", "assets/images/reunion.png"),
+                    _buildCategoryItem(
+                        context, "Cérémonie", "assets/images/céremonies.png"),
+                    _buildCategoryItem(
+                        context, "Atelier", "assets/images/atelier.png"),
+                    _buildCategoryItem(
+                        context, "Divers", "assets/images/divers.png"),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  Widget _buildCategoryItem(BuildContext context, String title, String image) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => DetailPage(title: title)),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          image: DecorationImage(
+            image: AssetImage(image),
+            fit: BoxFit.cover,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          color: Colors.blueAccent
+              .withOpacity(0.6), // Changement de couleur du bouton
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Page de détails pour chaque catégorie
+class DetailPage extends StatelessWidget {
+  final String title;
+  const DetailPage({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(
+        child: Text(
+          "Détails sur $title",
+          style: const TextStyle(fontSize: 20),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _buildCategoryItem(BuildContext context, String title, String image) {
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => DetailPage(title: title)),
+      );
+    },
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        image: DecorationImage(
+          image: AssetImage(image),
+          fit: BoxFit.cover,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        color: Colors.black.withOpacity(0.6), // Fond sombre pour le texte
+        child: Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildBottomNavigationBar(BuildContext context) {
+  return BottomNavigationBar(
+    backgroundColor: const Color.fromARGB(255, 234, 229, 224),
+
+    selectedItemColor: const Color.fromARGB(246, 68, 137, 255),
+
+    unselectedItemColor: Colors.black,
+
+    currentIndex: 0, // Indice de la page actuelle
+    onTap: (index) {
+      switch (index) {
+        case 0:
+          Navigator.pushNamed(context, '/home');
+          break;
+        case 1:
+          Navigator.pushNamed(context, '/add');
+          break;
+        case 2:
+          Navigator.pushNamed(context, '/message');
+          break;
+        case 3:
+          Navigator.pushNamed(context, '/calendar');
+          break;
+      }
+    },
+    items: const [
+      BottomNavigationBarItem(
+        icon: Icon(Icons.home),
+        label: 'Accueil',
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.add_circle),
+        label: 'Ajouter',
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.chat),
+        label: 'Messages',
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.calendar_today),
+        label: 'Calendrier',
+      ),
+    ],
+  );
+}
+
+// page d'ajout d'événement
+
+class AddPage extends StatelessWidget {
+  const AddPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Ajouter un événement'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
+      bottomNavigationBar: _buildBottomNavigationBar(context),
+    );
+  }
+
   Widget _buildBottomNavigationBar(BuildContext context) {
     return BottomNavigationBar(
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      selectedItemColor: Colors.amberAccent,
-      unselectedItemColor: Color.fromARGB(255, 137, 117, 117),
-      currentIndex: 0, // Indice de la page actuelle
+      unselectedLabelStyle: const TextStyle(color: Colors.black),
+      backgroundColor: Color.fromARGB(255, 84, 80, 75),
+      selectedItemColor: const Color.fromARGB(246, 68, 137, 255),
+      unselectedItemColor: Color.fromARGB(255, 34, 33, 33),
+      currentIndex: 1, // Indice de la page actuelle
       onTap: (index) {
         switch (index) {
           case 0:
@@ -573,24 +786,52 @@ class MessagePage extends StatelessWidget {
         title: const Text('Messages'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+
+      bottomNavigationBar: _buildBottomNavigationBar(context), // Appel correct
+    );
+  }
+
+  Widget _buildBottomNavigationBar(BuildContext context) {
+    return BottomNavigationBar(
+      unselectedLabelStyle: const TextStyle(color: Colors.black),
+      backgroundColor: Color.fromARGB(255, 84, 80, 75),
+      selectedItemColor: const Color.fromARGB(246, 68, 137, 255),
+      unselectedItemColor: Color.fromARGB(255, 34, 33, 33),
+      currentIndex: 2, // Indice de la page actuelle
+      onTap: (index) {
+        switch (index) {
+          case 0:
+            Navigator.pushNamed(context, '/home');
+            break;
+          case 1:
+            Navigator.pushNamed(context, '/add');
+            break;
+          case 2:
+            Navigator.pushNamed(context, '/message');
+            break;
+          case 3:
+            Navigator.pushNamed(context, '/calendar');
+            break;
+        }
+      },
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home),
+          label: 'Accueil',
         ),
-        child: const Center(
-          child: Text(
-            'Bienvenue sur la page des messages',
-            style: TextStyle(fontSize: 24, color: Colors.white),
-          ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.add_circle),
+          label: 'Ajouter',
         ),
-      ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.chat),
+          label: 'Messages',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.calendar_today),
+          label: 'Calendrier',
+        ),
+      ],
     );
   }
 }
@@ -606,24 +847,109 @@ class CalendarPage extends StatelessWidget {
         title: const Text('Calendrier'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: const Center(
-          child: Text(
-            'Bienvenue sur la page du calendrier',
-            style: TextStyle(fontSize: 24, color: Colors.white),
-          ),
+      bottomNavigationBar: _buildBottomNavigationBar(context),
+      body: _build(context),
+    );
+  }
+
+  Widget _build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.tertiary,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Rechercher un événement',
+                prefixIcon: Icon(Icons.search, color: Colors.white),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.7),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  /*  Text(
+                    'Bienvenue sur la page du calendrier',
+                    style: TextStyle(fontSize: 12, color: Colors.white),
+                  ),*/
+                  SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(8.0),
+                    color: Color.fromARGB(176, 214, 225, 226).withOpacity(0.7),
+                    child: TableCalendar(
+                      focusedDay: DateTime.now(),
+                      firstDay: DateTime(2020, 01, 01),
+                      lastDay: DateTime(2025, 12, 31),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigationBar(BuildContext context) {
+    return BottomNavigationBar(
+      unselectedLabelStyle: const TextStyle(color: Colors.black),
+      backgroundColor: Color.fromARGB(255, 84, 80, 75),
+      selectedItemColor: const Color.fromARGB(246, 68, 137, 255),
+      unselectedItemColor: Color.fromARGB(255, 34, 33, 33),
+      currentIndex: 3, // Indice de la page actuelle
+      onTap: (index) {
+        switch (index) {
+          case 0:
+            Navigator.pushNamed(context, '/home');
+            break;
+          case 1:
+            Navigator.pushNamed(context, '/add');
+            break;
+          case 2:
+            Navigator.pushNamed(context, '/message');
+            break;
+          case 3:
+            Navigator.pushNamed(context, '/calendar');
+            break;
+        }
+      },
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home),
+          label: 'Accueil',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.add_circle),
+          label: 'Ajouter',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.chat),
+          label: 'Messages',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.calendar_today),
+          label: 'Calendrier',
+        ),
+      ],
     );
   }
 }
