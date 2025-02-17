@@ -30,6 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  table_calendar: ^3.0.0
     
 
 
@@ -65,10 +66,19 @@ dev_dependencies:
   #   - images/a_dot_ham.jpeg
 flutter:
   uses-material-design: true
+  
 
   assets:
     - assets/images/google.png
-    - assets/icons/
+    - assets/images/planevent.png
+    - assets/images/planevent2.png
+    - assets/images/céremonies.png
+    - assets/images/divers.png
+    - assets/images/reunion.png
+    - assets/images/atelier.png
+ 
+
+    # - assets/icons/ # Uncomment this line if the directory exists
   # The following line ensures that the Material Icons font is
  
   # An image asset can refer to one or more resolution-specific "variants", see
