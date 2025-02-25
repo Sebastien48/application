@@ -3,8 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter/animation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: 'https://dqulfkeiubvczhpathuj.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxdWxma2VpdWJ2Y3pocGF0aHVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA0OTQ3MjksImV4cCI6MjA1NjA3MDcyOX0.hOwkD7Y6-SbqBbHviO1RzgIqdB00pI_GiMxoAzYEv_M',
+  );
+
+  // Test de connexion à Supabase
+  void testerConnexion() async {
+    final response =
+        await Supabase.instance.client.from('utilisateur').select().limit(1);
+
+    if (response.status != 200 || response.data == null) {
+      print('❌ Erreur de connexion à Supabase : ${response.statusText}');
+    } else {
+      print('✅ Connexion réussie ! Données : ${response.data}');
+    }
+  }
+
   runApp(const MyApp());
 }
 
@@ -15,13 +37,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PlanEvent',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color.fromARGB(255, 243, 82, 33),
           brightness: Brightness.light,
           primary: const Color(0xFF1569AD),
           secondary: const Color.fromARGB(185, 27, 42, 43),
-          tertiary: const Color(0x90287BD9),
+          tertiary: const Color.fromARGB(144, 166, 174, 183),
           onSecondary: Colors.white,
         ),
       ),
@@ -111,8 +134,6 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/images/planevent.png', height: 100),
-                const SizedBox(height: 20),
                 const Text(
                   "Bienvenue dans PlanEvent",
                   style: TextStyle(
@@ -121,6 +142,8 @@ class _SplashScreenState extends State<SplashScreen>
                     color: Colors.white,
                   ),
                 ),
+                Image.asset('assets/images/planevent.png', height: 100),
+                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -151,12 +174,25 @@ class _LoginPageState extends State<LoginPage> {
     });
   }
 
-  void _handleGooglePress() {
+  void _handleGooglePress() async {
     setState(() => isGooglePressed = true);
-    Future.delayed(const Duration(milliseconds: 300), () {
-      Navigator.pushNamed(context, '/google-signup');
-      setState(() => isGooglePressed = false);
-    });
+
+    String? email = await GoogleAuthService().choisirUnCompte(context);
+
+    if (email != null) {
+      print('Email récupéré : $email');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const GoogleSignUpPage(),
+          settings: RouteSettings(arguments: {'email': email}),
+        ),
+      );
+    } else {
+      print('Erreur : Aucun email récupéré');
+    }
+
+    setState(() => isGooglePressed = false);
   }
 
   @override
@@ -252,7 +288,7 @@ class _LoginPageState extends State<LoginPage> {
                       minimumSize: const Size(double.infinity, 50),
                       backgroundColor: isGooglePressed
                           ? Colors.red
-                          : Theme.of(context).colorScheme.secondary,
+                          : Theme.of(context).colorScheme.tertiary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -289,7 +325,155 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+// Service d'authentification Google
+class GoogleAuthService {
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  Future<String?> choisirUnCompte(BuildContext context) async {
+    try {
+      await _googleSignIn.signOut();
+      final GoogleSignInAccount? account = await _googleSignIn.signIn();
+      print('Email récupéré : ${account?.email}');
+      return account?.email;
+    } catch (error) {
+      print('Erreur Google Sign-In : $error');
+      return null;
+    }
+  }
+}
+
 // Page d'inscription avec Google
+class GoogleSignUpPage extends StatefulWidget {
+  const GoogleSignUpPage({super.key});
+
+  @override
+  _GoogleSignUpPageState createState() => _GoogleSignUpPageState();
+}
+
+class _GoogleSignUpPageState extends State<GoogleSignUpPage> {
+  bool pushbutton = false;
+  bool showPassword = false;
+  String? email;
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map?;
+    setState(() {
+      email = args?['email'] ?? 'Aucun email reçu';
+    });
+    print('Email reçu dans GoogleSignUpPage : $email');
+  }
+
+  void _enregistrerDansSupabase() async {
+    final supabase = Supabase.instance.client;
+
+    await supabase.from('users').insert({
+      'email': email,
+      'phone': phoneController.text,
+      'password': passwordController.text,
+    });
+
+    Navigator.pushReplacementNamed(context, '/home');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.secondary,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Inscription avec : $email',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: phoneController,
+                      decoration: const InputDecoration(
+                        labelText: 'Numéro de téléphone',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.phone),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: !showPassword,
+                      decoration: InputDecoration(
+                        labelText: 'Mot de passe',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            showPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              showPassword = !showPassword;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _enregistrerDansSupabase,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        backgroundColor: pushbutton
+                            ? Colors.red
+                            : Theme.of(context).colorScheme.onSecondary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text('S\'inscrire'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/*
 class GoogleSignUpPage extends StatefulWidget {
   const GoogleSignUpPage({super.key});
 
@@ -360,7 +544,7 @@ class _GoogleSignUpPageState extends State<GoogleSignUpPage> {
                         suffixIcon: IconButton(
                           icon: Icon(
                             showPassword
-                                ? Icons.visibility_off
+                             /   ? Icons.visibility_off
                                 : Icons.visibility,
                           ),
                           onPressed: () {
@@ -386,7 +570,7 @@ class _GoogleSignUpPageState extends State<GoogleSignUpPage> {
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
                         backgroundColor: pushbutton
-                            ? Colors.red
+                           / ? Colors.red
                             : Theme.of(context).colorScheme.onSecondary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -407,7 +591,7 @@ class _GoogleSignUpPageState extends State<GoogleSignUpPage> {
       ),
     );
   }
-}
+}*/
 
 // Page d'accueil
 class HomePage extends StatelessWidget {
@@ -417,7 +601,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        foregroundColor: Color.fromARGB(255, 202, 79, 79),
+        foregroundColor: const Color.fromARGB(255, 202, 79, 79),
         leading: Builder(
           builder: (context) {
             return IconButton(
@@ -472,17 +656,17 @@ class HomePage extends StatelessWidget {
                 ],
               ),
             ),
-            child: Column(
+            child: const Column(
               children: [
-                const Text(
+                Text(
                   'PlanEvent',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 24,
                   ),
                 ),
-                const SizedBox(height: 20),
-                const CircleAvatar(
+                SizedBox(height: 20),
+                CircleAvatar(
                   radius: 40,
                   backgroundImage: AssetImage('assets/images/avatar.png'),
                 ),
@@ -733,9 +917,9 @@ class AddPage extends StatelessWidget {
   Widget _buildBottomNavigationBar(BuildContext context) {
     return BottomNavigationBar(
       unselectedLabelStyle: const TextStyle(color: Colors.black),
-      backgroundColor: Color.fromARGB(255, 84, 80, 75),
+      backgroundColor: const Color.fromARGB(255, 84, 80, 75),
       selectedItemColor: const Color.fromARGB(246, 68, 137, 255),
-      unselectedItemColor: Color.fromARGB(255, 34, 33, 33),
+      unselectedItemColor: const Color.fromARGB(255, 34, 33, 33),
       currentIndex: 1, // Indice de la page actuelle
       onTap: (index) {
         switch (index) {
@@ -794,9 +978,9 @@ class MessagePage extends StatelessWidget {
   Widget _buildBottomNavigationBar(BuildContext context) {
     return BottomNavigationBar(
       unselectedLabelStyle: const TextStyle(color: Colors.black),
-      backgroundColor: Color.fromARGB(255, 84, 80, 75),
+      backgroundColor: const Color.fromARGB(255, 84, 80, 75),
       selectedItemColor: const Color.fromARGB(246, 68, 137, 255),
-      unselectedItemColor: Color.fromARGB(255, 34, 33, 33),
+      unselectedItemColor: const Color.fromARGB(255, 34, 33, 33),
       currentIndex: 2, // Indice de la page actuelle
       onTap: (index) {
         switch (index) {
@@ -871,7 +1055,7 @@ class CalendarPage extends StatelessWidget {
             child: TextField(
               decoration: InputDecoration(
                 hintText: 'Rechercher un événement',
-                prefixIcon: Icon(Icons.search, color: Colors.white),
+                prefixIcon: const Icon(Icons.search, color: Colors.white),
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.7),
                 border: OutlineInputBorder(
@@ -890,10 +1074,11 @@ class CalendarPage extends StatelessWidget {
                     'Bienvenue sur la page du calendrier',
                     style: TextStyle(fontSize: 12, color: Colors.white),
                   ),*/
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.all(8.0),
-                    color: Color.fromARGB(176, 214, 225, 226).withOpacity(0.7),
+                    color: const Color.fromARGB(176, 214, 225, 226)
+                        .withOpacity(0.7),
                     child: TableCalendar(
                       focusedDay: DateTime.now(),
                       firstDay: DateTime(2020, 01, 01),
@@ -912,9 +1097,9 @@ class CalendarPage extends StatelessWidget {
   Widget _buildBottomNavigationBar(BuildContext context) {
     return BottomNavigationBar(
       unselectedLabelStyle: const TextStyle(color: Colors.black),
-      backgroundColor: Color.fromARGB(255, 84, 80, 75),
+      backgroundColor: const Color.fromARGB(255, 84, 80, 75),
       selectedItemColor: const Color.fromARGB(246, 68, 137, 255),
-      unselectedItemColor: Color.fromARGB(255, 34, 33, 33),
+      unselectedItemColor: const Color.fromARGB(255, 34, 33, 33),
       currentIndex: 3, // Indice de la page actuelle
       onTap: (index) {
         switch (index) {

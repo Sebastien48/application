@@ -1,0 +1,15 @@
+plugins {
+    // ...existing code...
+}
+
+allprojects {
+    // ...existing code...
+}
+
+subprojects {
+    // ...existing code...
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = '17'
+        targetCompatibility = '17'
+    }
+}
